@@ -36,7 +36,8 @@ import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8002";
 const osWarningGuides = {
   firewall: {
     title: "Firewall Protection",
@@ -220,11 +221,11 @@ const authFetch = async (url, options = {}) => {
 };
 
 const loadAcademyProgress = async () => {
-  const response = await authFetch("http://127.0.0.1:8002/api/academy/progress");
+  const response = await authFetch(`${API_BASE_URL}/api/academy/progress`);
   if (response.ok) setBackendAcademyProgress(await response.json());
 };
 const loadDynamicQuestion = async (mode, newCycle = false) => {
-  const response = await authFetch(`http://127.0.0.1:8002/api/academy/${mode}/next${newCycle ? "?new_cycle=true" : ""}`, { method: "POST" });
+  const response = await authFetch(`${API_BASE_URL}/api/academy/${mode}/next${newCycle ? "?new_cycle=true" : ""}`, { method: "POST" });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || "Could not load a question");
   if (mode === "quiz") { setQuizQuestion(data); setQuizFeedback(null); }
@@ -234,7 +235,7 @@ const loadDynamicQuestion = async (mode, newCycle = false) => {
 const submitDynamicAnswer = async (mode, selectedOption) => {
   const question = mode === "quiz" ? quizQuestion : challengeQuestion;
   if (!question) return;
-  const response = await authFetch(`http://127.0.0.1:8002/api/academy/${mode}/answer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attempt_token: question.attempt_token, selected_option: selectedOption }) });
+  const response = await authFetch(`${API_BASE_URL}/api/academy/${mode}/answer`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ attempt_token: question.attempt_token, selected_option: selectedOption }) });
   const data = await response.json();
   if (!response.ok) throw new Error(data.detail || "Could not submit answer");
   mode === "quiz" ? setQuizFeedback({ ...data, selectedOption }) : setChallengeFeedback({ ...data, selectedOption });
@@ -248,7 +249,7 @@ const encryptLabText = async () => {
   if (!labPlaintext.trim()) { setLabMessage({ type: "error", text: "Enter text before encrypting." }); return; }
   setLabLoading(true);
   try {
-    const response = await authFetch("http://127.0.0.1:8002/api/encryption-lab/encrypt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plaintext: labPlaintext }) });
+    const response = await authFetch(`${API_BASE_URL}/api/encryption-lab/encrypt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ plaintext: labPlaintext }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || "Encryption failed.");
     setLabCiphertext(data.ciphertext); setLabKey(data.key); setLabNonce(data.nonce);
@@ -262,7 +263,7 @@ const decryptLabText = async () => {
   if (!labCiphertext.trim() || !labKey.trim() || !labNonce.trim()) { setLabMessage({ type: "error", text: "Ciphertext, key and nonce are all required." }); return; }
   setLabLoading(true);
   try {
-    const response = await authFetch("http://127.0.0.1:8002/api/encryption-lab/decrypt", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ciphertext: labCiphertext, key: labKey, nonce: labNonce }) });
+    const response = await authFetch(`${API_BASE_URL}/api/encryption-lab/decrypt`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ciphertext: labCiphertext, key: labKey, nonce: labNonce }) });
     const data = await response.json();
     if (!response.ok) throw new Error(data.detail || "Decryption failed.");
     setLabDecrypted(data.plaintext); setLabMessage({ type: "success", text: "Authentication passed. The original text was restored." });
@@ -274,8 +275,8 @@ const loadSupportNotifications = async () => {
   if (currentUser?.role !== "Admin" || !authToken) return;
   try {
     const [countResponse, messagesResponse] = await Promise.all([
-      authFetch("http://127.0.0.1:8002/api/support/admin/unread-count"),
-      authFetch("http://127.0.0.1:8002/api/support/admin/messages"),
+      authFetch(`${API_BASE_URL}/api/support/admin/unread-count`),
+      authFetch(`${API_BASE_URL}/api/support/admin/messages`),
     ]);
     if (!countResponse.ok || !messagesResponse.ok) throw new Error("Unable to load support notifications");
     const countData = await countResponse.json();
@@ -298,12 +299,12 @@ useEffect(() => {
 
 const openSupportMessage = async (id) => {
   try {
-    const response = await authFetch(`http://127.0.0.1:8002/api/support/admin/messages/${id}`);
+    const response = await authFetch(`${API_BASE_URL}/api/support/admin/messages/${id}`);
     if (!response.ok) throw new Error("Unable to open support message");
     setSupportSelectedMessage(await response.json());
     const selected = supportMessages.find(message => message.id === id);
     if (selected && !selected.is_read) {
-      const readResponse = await authFetch(`http://127.0.0.1:8002/api/support/admin/messages/${id}/read`, { method: "PATCH" });
+      const readResponse = await authFetch(`${API_BASE_URL}/api/support/admin/messages/${id}/read`, { method: "PATCH" });
       if (!readResponse.ok) throw new Error("Unable to mark message as read");
       setSupportSelectedMessage(message => ({ ...message, is_read: true }));
       await loadSupportNotifications();
@@ -315,7 +316,7 @@ useEffect(() => {
 
   const restoreSession = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8002/api/auth/me", {
+      const response = await fetch(`${API_BASE_URL}/api/auth/me`, {
         headers: {
           Authorization: `Bearer ${authToken}`,
         },
@@ -378,7 +379,7 @@ const loadVulnerabilities = async () => {
 
   try {
     const response = await authFetch(
-      "http://127.0.0.1:8002/api/vulnerabilities/"
+      `${API_BASE_URL}/api/vulnerabilities/`
     );
 
     if (!response.ok) {
@@ -504,7 +505,7 @@ const runOSScan = async () => {
 
   try {
     const response = await authFetch(
-      "http://127.0.0.1:8002/api/os-security/scan"
+      `${API_BASE_URL}/api/os-security/scan`
     );
 
     if (!response.ok) {
@@ -790,7 +791,7 @@ useEffect(() => {
 
     try {
       const response = await authFetch(
-        "http://127.0.0.1:8002/api/scanner/hostname"
+        `${API_BASE_URL}/api/scanner/hostname`
       );
 
       if (!response.ok) {
@@ -814,7 +815,7 @@ useEffect(() => {
 
   try {
     const response = await authFetch(
-      `http://127.0.0.1:8002/api/web-security/check?url=${encodeURIComponent(webSecurityUrl.trim())}`,
+      `${API_BASE_URL}/api/web-security/check?url=${encodeURIComponent(webSecurityUrl.trim())}`,
       {
         method: "POST",
       }
@@ -842,7 +843,7 @@ useEffect(() => {
 
     try {
       const response = await authFetch(
-        "http://127.0.0.1:8002/api/assets/"
+        `${API_BASE_URL}/api/assets/`
       );
 
       if (!response.ok) {
@@ -870,9 +871,9 @@ const loadDashboardData = async () => {
       vulnerabilityResponse,
       securityScoreResponse
     ] = await Promise.all([
-      authFetch("http://127.0.0.1:8002/api/assets/"),
-      authFetch("http://127.0.0.1:8002/api/vulnerabilities/"),
-      authFetch("http://127.0.0.1:8002/api/dashboard/security-score")
+      authFetch(`${API_BASE_URL}/api/assets/`),
+      authFetch(`${API_BASE_URL}/api/vulnerabilities/`),
+      authFetch(`${API_BASE_URL}/api/dashboard/security-score`)
     ]);
 
     if (
@@ -935,8 +936,8 @@ const loadDashboardData = async () => {
   try {
     const response = await authFetch(
       isEditing
-        ? `http://127.0.0.1:8002/api/assets/${editingAssetId}`
-        : "http://127.0.0.1:8002/api/assets/",
+        ? `${API_BASE_URL}/api/assets/${editingAssetId}`
+        : `${API_BASE_URL}/api/assets/`,
       {
         method: isEditing ? "PUT" : "POST",
         headers: {
@@ -992,7 +993,7 @@ const deleteAsset = async (assetId) => {
 
   try {
     const response = await authFetch(
-      `http://127.0.0.1:8002/api/assets/${assetId}`,
+      `${API_BASE_URL}/api/assets/${assetId}`,
       {
         method: "DELETE",
       }
@@ -1011,7 +1012,7 @@ const deleteAsset = async (assetId) => {
 
   // Check backend health
   useEffect(() => {
-    fetch("http://127.0.0.1:8002/api/health")
+    fetch(`${API_BASE_URL}/api/health`)
       .then((response) => {
         if (!response.ok) {
           throw new Error("Backend unavailable");
@@ -1044,7 +1045,7 @@ const discoverDevice = async () => {
 
   try {
     const response = await authFetch(
-      "http://127.0.0.1:8002/api/assets/discover"
+      `${API_BASE_URL}/api/assets/discover`
     );
 
     const data = await response.json();
@@ -1077,7 +1078,7 @@ const registerDiscoveredDevice = async () => {
 
   try {
     const response = await authFetch(
-      "http://127.0.0.1:8002/api/assets/",
+      `${API_BASE_URL}/api/assets/`,
       {
         method: "POST",
         headers: {
@@ -1126,7 +1127,7 @@ const sendChatMessage = async (e) => {
 
   try {
     const response = await authFetch(
-      "http://127.0.0.1:8002/api/ai-assistant/chat",
+      `${API_BASE_URL}/api/ai-assistant/chat`,
       {
         method: "POST",
         headers: {
@@ -1159,8 +1160,8 @@ const handleRegister = async (e) => {
 
   try {
     const registrationPath = signupRole === "Admin"
-      ? "http://127.0.0.1:8002/api/auth/register-admin"
-      : "http://127.0.0.1:8002/api/auth/register";
+      ? `${API_BASE_URL}/api/auth/register-admin`
+      : `${API_BASE_URL}/api/auth/register`;
     const response = await fetch(registrationPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -1203,7 +1204,7 @@ const handleLogin = async (e) => {
   setAuthLoading(true);
 
   try {
-    const response = await fetch("http://127.0.0.1:8002/api/auth/login", {
+    const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1255,7 +1256,7 @@ const handleSupportSubmit = async (event) => {
   setSupportFeedback({ type: "", message: "" });
   setSupportLoading(true);
   try {
-    const response = await fetch("http://127.0.0.1:8002/api/support/requests", {
+    const response = await fetch(`${API_BASE_URL}/api/support/requests`, {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(supportForm),
     });
