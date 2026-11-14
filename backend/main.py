@@ -28,16 +28,18 @@ app = FastAPI(
 
 # CORS configuration
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://cybershield-x-three.vercel.app",
+        "https://cyber-shield-x-three.vercel.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 
 # Public authentication
