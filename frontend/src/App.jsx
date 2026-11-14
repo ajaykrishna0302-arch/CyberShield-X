@@ -1159,9 +1159,9 @@ const handleRegister = async (e) => {
 
   try {
     const registrationPath = signupRole === "Admin"
-      ? "/api/auth/register-admin"
-      : "/api/auth/register";
-    const response = await fetch(`http://127.0.0.1:8002${registrationPath}`, {
+      ? "http://127.0.0.1:8002/api/auth/register-admin"
+      : "http://127.0.0.1:8002/api/auth/register";
+    const response = await fetch(registrationPath, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -1172,11 +1172,18 @@ const handleRegister = async (e) => {
       }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      throw new Error(`Registration server returned an invalid response (HTTP ${response.status}).`);
+    }
 
     if (!response.ok) {
-      throw new Error(data.detail || "Registration failed");
+      throw new Error(data.detail || `Registration failed (HTTP ${response.status}).`);
     }
+    if (!data.user) throw new Error("Registration response was incomplete. Please try again.");
 
     setAuthMode("login");
     setSignupRole("");
@@ -1205,11 +1212,18 @@ const handleLogin = async (e) => {
       }),
     });
 
-    const data = await response.json();
+    const responseText = await response.text();
+    let data;
+    try {
+      data = responseText ? JSON.parse(responseText) : {};
+    } catch {
+      throw new Error(`Login server returned an invalid response (HTTP ${response.status}).`);
+    }
 
     if (!response.ok) {
-      throw new Error(data.detail || "Login failed");
+      throw new Error(data.detail || `Login failed (HTTP ${response.status}).`);
     }
+    if (!data.access_token || !data.user) throw new Error("Login response was incomplete. Please try again.");
 
     sessionStorage.setItem("cybershieldToken", data.access_token);
     setAuthToken(data.access_token);
